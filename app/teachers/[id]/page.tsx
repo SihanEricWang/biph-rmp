@@ -220,14 +220,14 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
             <div className="mt-8 flex gap-4">
               {isAuthed ? (
                 <a
-                  href={`/professor/${teacherId}/rate`}
+                  href={`/teacher/${teacherId}/rate`}
                   className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
                 >
                   Rate <span className="ml-2">→</span>
                 </a>
               ) : (
                 <a
-                  href={`/login?redirectTo=${encodeURIComponent(`/professor/${teacherId}/rate`)}`}
+                  href={`/login?redirectTo=${encodeURIComponent(`/teacher/${teacherId}/rate`)}`}
                   className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
                 >
                   Rate <span className="ml-2">→</span>
@@ -292,7 +292,7 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
 
           {/* ✅ Server-safe Course filter (no onChange / no window) */}
           <form
-            action={`/professor/${teacherId}#ratings`}
+            action={`/teacher/${teacherId}#ratings`}
             method="get"
             className="mt-4 flex w-full max-w-sm items-center gap-2"
           >
@@ -402,7 +402,7 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
             <ReviewForm
               teacherId={teacherId}
               isAuthed={isAuthed}
-              redirectTo={`/professor/${teacherId}#rate`}
+              redirectTo={`/teachers/${teacherId}#rate`}
               suggestedTags={topTags}
             />
           </div>
