@@ -1,6 +1,7 @@
-// app/teacher/[id]/page.tsx
+// app/professor/[id]/page.tsx
 import { notFound } from "next/navigation";
 import ReviewForm from "@/components/ReviewForm";
+import ReviewVoteButtons from "@/components/ReviewVoteButtons";
 import { createSupabaseServerClient } from "@/lib/supabase";
 
 function ratingClass(avg: number | null) {
@@ -52,7 +53,7 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
   const isAuthed = !!userData.user;
   const heyName = emailToHey(userData.user?.email);
 
-  // main teacher stats (from your aggregated view)
+  // main teacher stats (from aggregated view)
   const { data: teacher, error: teacherErr } = await supabase
     .from("teacher_list")
     .select("id, full_name, subject, avg_quality, review_count, pct_would_take_again, avg_difficulty")
@@ -75,7 +76,8 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
     2: dist?.q2 ?? 0,
     1: dist?.q1 ?? 0,
   };
-  const totalRatings = (teacher.review_count ?? 0) || Object.values(counts).reduce((a, b) => a + b, 0);
+  const totalRatings =
+    (teacher.review_count ?? 0) || Object.values(counts).reduce((a, b) => a + b, 0);
 
   // top tags
   const { data: topTagsRows } = await supabase
@@ -108,18 +110,49 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
     .order("created_at", { ascending: false })
     .limit(25);
 
-  if (selectedCourse) {
-    reviewsQuery = reviewsQuery.eq("course", selectedCourse);
-  }
+  if (selectedCourse) reviewsQuery = reviewsQuery.eq("course", selectedCourse);
 
   const { data: reviews, error: reviewsErr } = await reviewsQuery;
 
+  // ---- votes (counts + my vote) ----
+  const reviewIds = (reviews ?? []).map((r) => r.id);
+
+  const { data: countRows } =
+    reviewIds.length > 0
+      ? await supabase.rpc("get_review_vote_counts", { review_ids: reviewIds })
+      : { data: [] as any[] };
+
+  const countsByReview = new Map<string, { up: number; down: number }>();
+  (countRows ?? []).forEach((row: any) => {
+    countsByReview.set(String(row.review_id), {
+      up: Number(row.upvotes ?? 0),
+      down: Number(row.downvotes ?? 0),
+    });
+  });
+
+  const myVoteByReview = new Map<string, 1 | -1>();
+  if (isAuthed && reviewIds.length > 0) {
+    const { data: myVotes } = await supabase
+      .from("review_votes")
+      .select("review_id,vote")
+      .in("review_id", reviewIds)
+      .eq("user_id", userData.user!.id);
+
+    (myVotes ?? []).forEach((v: any) => {
+      const vv = Number(v.vote);
+      if (vv === 1 || vv === -1) myVoteByReview.set(String(v.review_id), vv);
+    });
+  }
+
   return (
     <main className="min-h-screen bg-white">
-      {/* TOP NAV (match the style you showed) */}
+      {/* TOP NAV */}
       <header className="bg-black text-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
+          <a
+            href="/teachers"
+            className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
+          >
             RMT
           </a>
 
@@ -133,7 +166,10 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
               />
             </form>
             <div className="text-sm text-white/70">at</div>
-            <a href="/teachers" className="text-sm font-semibold underline underline-offset-2 decoration-white/40">
+            <a
+              href="/teachers"
+              className="text-sm font-semibold underline underline-offset-2 decoration-white/40"
+            >
               BIPH
             </a>
           </div>
@@ -171,12 +207,20 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
               <div>
                 <div className="text-5xl font-extrabold tracking-tight">{teacher.full_name}</div>
                 <div className="mt-3 text-sm text-neutral-800">
-                  Teacher in the <span className="font-semibold underline underline-offset-2">{teacher.subject ?? "—"}</span>{" "}
-                  department at <span className="font-semibold underline underline-offset-2">BIPH</span>
+                  Teacher in the{" "}
+                  <span className="font-semibold underline underline-offset-2">
+                    {teacher.subject ?? "—"}
+                  </span>{" "}
+                  department at{" "}
+                  <span className="font-semibold underline underline-offset-2">BIPH</span>
                 </div>
               </div>
 
-              <button className="mt-2 rounded-lg p-2 hover:bg-neutral-100" aria-label="Bookmark" type="button">
+              <button
+                className="mt-2 rounded-lg p-2 hover:bg-neutral-100"
+                aria-label="Bookmark"
+                type="button"
+              >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="opacity-70">
                   <path
                     d="M6 3h12a1 1 0 011 1v18l-7-4-7 4V4a1 1 0 011-1z"
@@ -199,7 +243,7 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
               </div>
             </div>
 
-            {/* Rate button (Compare removed) */}
+            {/* Rate button */}
             <div className="mt-8 flex gap-4">
               {isAuthed ? (
                 <a
@@ -238,7 +282,7 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
             </div>
           </section>
 
-          {/* RIGHT PANEL: Rating Distribution */}
+          {/* RIGHT PANEL */}
           <section className="rounded-2xl bg-neutral-50 p-6">
             <div className="text-lg font-semibold">Rating Distribution</div>
 
@@ -273,16 +317,16 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
         <section id="ratings" className="mt-14">
           <div className="text-lg font-semibold">{teacher.review_count ?? 0} Student Ratings</div>
 
-          {/* Course filter (like screenshot) */}
-          <div className="mt-4 w-44">
+          {/* ✅ Server-safe Course filter (no onChange / no window) */}
+          <form
+            action={`/professor/${teacherId}#ratings`}
+            method="get"
+            className="mt-4 flex w-full max-w-sm items-center gap-2"
+          >
             <select
-              value={selectedCourse || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                const url = v ? `/professor/${teacherId}?course=${encodeURIComponent(v)}#ratings` : `/professor/${teacherId}#ratings`;
-                window.location.href = url;
-              }}
-              className="h-11 w-full rounded-xl border bg-white px-3 text-sm outline-none focus:ring"
+              name="course"
+              defaultValue={selectedCourse || ""}
+              className="h-11 w-44 rounded-xl border bg-white px-3 text-sm outline-none focus:ring"
             >
               <option value="">All courses</option>
               {courseOptions.map((c) => (
@@ -291,7 +335,14 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
                 </option>
               ))}
             </select>
-          </div>
+
+            <button
+              type="submit"
+              className="h-11 rounded-xl border bg-white px-4 text-sm hover:bg-neutral-50"
+            >
+              Apply
+            </button>
+          </form>
 
           {reviewsErr ? (
             <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
@@ -305,53 +356,71 @@ export default async function ProfessorPage({ params, searchParams }: PageProps)
                 No reviews yet.
               </div>
             ) : (
-              (reviews ?? []).map((r) => (
-                <div key={r.id} className="rounded-2xl border bg-white shadow-sm">
-                  <div className="flex gap-6 p-6">
-                    {/* left quality box */}
-                    <div className="w-28 shrink-0 text-center">
-                      <div className="text-xs font-semibold tracking-wide text-neutral-700">QUALITY</div>
-                      <div className={`mt-2 rounded-xl px-3 py-5 ${ratingClass(r.quality)}`}>
-                        <div className="text-4xl font-extrabold leading-none">{Number(r.quality).toFixed(1)}</div>
-                      </div>
-                    </div>
+              (reviews ?? []).map((r) => {
+                const key = String(r.id);
+                const voteCounts = countsByReview.get(key) ?? { up: 0, down: 0 };
+                const myVote = (myVoteByReview.get(key) ?? 0) as 1 | -1 | 0;
 
-                    {/* content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="text-sm font-extrabold tracking-wide text-neutral-900">
-                          {r.course ? String(r.course).toUpperCase() : "—"}
+                return (
+                  <div key={key} className="rounded-2xl border bg-white shadow-sm">
+                    <div className="flex gap-6 p-6">
+                      {/* left quality box */}
+                      <div className="w-28 shrink-0 text-center">
+                        <div className="text-xs font-semibold tracking-wide text-neutral-700">QUALITY</div>
+                        <div className={`mt-2 rounded-xl px-3 py-5 ${ratingClass(r.quality)}`}>
+                          <div className="text-4xl font-extrabold leading-none">
+                            {Number(r.quality).toFixed(1)}
+                          </div>
                         </div>
-                        <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
                       </div>
 
-                      <div className="mt-2 text-sm text-neutral-800">
-                        <span className="font-semibold">Would take again:</span>{" "}
-                        {r.would_take_again ? "Yes" : "No"}
-                        <span className="mx-2 text-neutral-300">|</span>
-                        <span className="font-semibold">Difficulty:</span> {r.difficulty}/5
-                      </div>
-
-                      {Array.isArray(r.tags) && r.tags.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {r.tags.map((t: string) => (
-                            <span
-                              key={t}
-                              className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
-                            >
-                              {t}
-                            </span>
-                          ))}
+                      {/* content */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="text-sm font-extrabold tracking-wide text-neutral-900">
+                            {r.course ? String(r.course).toUpperCase() : "—"}
+                          </div>
+                          <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
                         </div>
-                      ) : null}
 
-                      {r.comment ? (
-                        <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
-                      ) : null}
+                        <div className="mt-2 text-sm text-neutral-800">
+                          <span className="font-semibold">Would take again:</span>{" "}
+                          {r.would_take_again ? "Yes" : "No"}
+                          <span className="mx-2 text-neutral-300">|</span>
+                          <span className="font-semibold">Difficulty:</span> {r.difficulty}/5
+                        </div>
+
+                        {Array.isArray(r.tags) && r.tags.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {r.tags.map((t: string) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {r.comment ? (
+                          <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
+                        ) : null}
+
+                        {/* ✅ Like / Dislike buttons */}
+                        <ReviewVoteButtons
+                          teacherId={teacherId}
+                          reviewId={key}
+                          upvotes={voteCounts.up}
+                          downvotes={voteCounts.down}
+                          myVote={myVote}
+                          isAuthed={isAuthed}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
