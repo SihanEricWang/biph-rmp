@@ -3,6 +3,7 @@ import SearchBar from "@/components/SearchBar";
 import ProfessorCard from "@/components/ProfessorCard";
 import type { TeacherListItem } from "@/types";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import Header from "@/components/Header";
 
 type PageProps = {
   searchParams?: {
@@ -68,38 +69,13 @@ export default async function TeachersPage({ searchParams }: PageProps) {
   return (
     <main className="min-h-screen bg-neutral-50">
       {/* TOP NAV (match your screenshot style) */}
-      <header className="bg-black text-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <a
-            href="/teachers"
-            className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
-          >
-            RMT
-          </a>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="text-sm font-semibold">Teachers</div>
-            {/* top search that goes to /teachers?q=... */}
-            <form action="/teachers" className="relative">
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Teacher name"
-                className="h-9 w-[380px] rounded-full bg-white/10 px-4 text-sm outline-none placeholder:text-white/60 focus:bg-white/15"
-              />
-              {/* keep subject if present */}
-              {subject ? <input type="hidden" name="subject" value={subject} /> : null}
-            </form>
-
-            <div className="text-sm text-white/70">at</div>
-            <div className="text-sm font-semibold underline underline-offset-2 decoration-white/40">
-              BIPH
-            </div>
-          </div>
-
-          <div className="ml-auto text-sm font-extrabold tracking-wide">HEY, {heyName}</div>
-        </div>
-      </header>
+      <Header
+  heyName={heyName}
+  isAuthed={!!userData.user}
+  active="teachers"
+  showSearch
+  searchDefaultValue={q}
+/>
 
       {/* CONTENT */}
       <div className="mx-auto max-w-6xl px-4 py-10">
