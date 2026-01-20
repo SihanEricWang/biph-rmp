@@ -1,0 +1,312 @@
+// app/professor/[id]/page.tsx
+import { notFound } from "next/navigation";
+import ReviewForm from "@/components/ReviewForm";
+import { createSupabaseServerClient } from "@/lib/supabase";
+
+function ratingClass(avg: number | null) {
+  if (avg === null) return "bg-neutral-200 text-neutral-900";
+  if (avg < 2) return "bg-rose-200 text-neutral-900";
+  if (avg < 3) return "bg-orange-200 text-neutral-900";
+  if (avg < 4) return "bg-yellow-200 text-neutral-900";
+  return "bg-emerald-200 text-neutral-900";
+}
+
+function fmt1(n: number | null) {
+  if (n === null || Number.isNaN(n)) return "—";
+  return n.toFixed(1);
+}
+
+function fmtPct(n: number | null) {
+  if (n === null || Number.isNaN(n)) return "—";
+  return `${Math.round(n)}%`;
+}
+
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  const month = d.toLocaleString("en-US", { month: "short" });
+  return `${month} ${ordinal(d.getDate())}, ${d.getFullYear()}`;
+}
+
+type PageProps = {
+  params: { id: string };
+  searchParams?: { course?: string; error?: string };
+};
+
+function emailToHey(email?: string | null) {
+  if (!email) return "GUEST";
+  const name = email.split("@")[0] || "USER";
+  return name.replaceAll(".", " ").toUpperCase();
+}
+
+export default async function ProfessorPage({ params, searchParams }: PageProps) {
+  const supabase = createSupabaseServerClient();
+  const teacherId = params.id;
+
+  const { data: userData } = await supabase.auth.getUser();
+  const isAuthed = !!userData.user;
+  const heyName = emailToHey(userData.user?.email);
+
+  // main teacher stats (from your aggregated view)
+  const { data: teacher, error: teacherErr } = await supabase
+    .from("teacher_list")
+    .select("id, full_name, subject, avg_quality, review_count, pct_would_take_again, avg_difficulty")
+    .eq("id", teacherId)
+    .maybeSingle();
+
+  if (teacherErr || !teacher) notFound();
+
+  // rating distribution
+  const { data: dist } = await supabase
+    .from("teacher_quality_distribution")
+    .select("q5,q4,q3,q2,q1")
+    .eq("teacher_id", teacherId)
+    .maybeSingle();
+
+  const counts = {
+    5: dist?.q5 ?? 0,
+    4: dist?.q4 ?? 0,
+    3: dist?.q3 ?? 0,
+    2: dist?.q2 ?? 0,
+    1: dist?.q1 ?? 0,
+  };
+  const totalRatings = (teacher.review_count ?? 0) || Object.values(counts).reduce((a, b) => a + b, 0);
+
+  // top tags
+  const { data: topTagsRows } = await supabase
+    .from("teacher_top_tags")
+    .select("tag,cnt")
+    .eq("teacher_id", teacherId)
+    .order("cnt", { ascending: false })
+    .limit(10);
+
+  const topTags = (topTagsRows ?? []).map((r) => String(r.tag));
+
+  // course dropdown options
+  const { data: courseRows } = await supabase
+    .from("reviews")
+    .select("course")
+    .eq("teacher_id", teacherId)
+    .not("course", "is", null);
+
+  const courseOptions = Array.from(
+    new Set((courseRows ?? []).map((r) => r.course).filter(Boolean) as string[])
+  ).sort((a, b) => a.localeCompare(b));
+
+  const selectedCourse = (searchParams?.course ?? "").trim();
+
+  // reviews list
+  let reviewsQuery = supabase
+    .from("reviews")
+    .select("id, quality, difficulty, would_take_again, comment, tags, course, created_at")
+    .eq("teacher_id", teacherId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+
+  if (selectedCourse) {
+    reviewsQuery = reviewsQuery.eq("course", selectedCourse);
+  }
+
+  const { data: reviews, error: reviewsErr } = await reviewsQuery;
+
+  return (
+    <main className="min-h-screen bg-white">
+      {/* TOP NAV (match the style you showed) */}
+      <header className="bg-black text-white">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+          <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
+            RMT
+          </a>
+
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="text-sm font-semibold">Teachers</div>
+            <form action="/teachers" className="relative">
+              <input
+                name="q"
+                placeholder="Teacher name"
+                className="h-9 w-[360px] rounded-full bg-white/10 px-4 text-sm outline-none placeholder:text-white/60 focus:bg-white/15"
+              />
+            </form>
+            <div className="text-sm text-white/70">at</div>
+            <a href="/teachers" className="text-sm font-semibold underline underline-offset-2 decoration-white/40">
+              BIPH
+            </a>
+          </div>
+
+          <div className="ml-auto text-sm font-extrabold tracking-wide">HEY, {heyName}</div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {searchParams?.error ? (
+          <div className="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            {searchParams.error}
+          </div>
+        ) : null}
+
+        {/* TOP GRID */}
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* LEFT PANEL */}
+          <section>
+            <div className="flex items-start gap-4">
+              <div className="flex items-end gap-3">
+                <div className="text-7xl font-black leading-none">{fmt1(teacher.avg_quality)}</div>
+                <div className="pb-3 text-lg font-semibold text-neutral-400">/ 5</div>
+              </div>
+            </div>
+
+            <div className="mt-3 text-sm font-semibold text-neutral-800">
+              Overall Quality Based on{" "}
+              <span className="underline underline-offset-2 decoration-neutral-300">
+                {teacher.review_count ?? 0} ratings
+              </span>
+            </div>
+
+            <div className="mt-6 flex items-start justify-between gap-4">
+              <div>
+                <div className="text-5xl font-extrabold tracking-tight">{teacher.full_name}</div>
+                <div className="mt-3 text-sm text-neutral-800">
+                  Teacher in the <span className="font-semibold underline underline-offset-2">{teacher.subject ?? "—"}</span>{" "}
+                  department at <span className="font-semibold underline underline-offset-2">BIPH</span>
+                </div>
+              </div>
+
+              <button className="mt-2 rounded-lg p-2 hover:bg-neutral-100" aria-label="Bookmark" type="button">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="opacity-70">
+                  <path
+                    d="M6 3h12a1 1 0 011 1v18l-7-4-7 4V4a1 1 0 011-1z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mt-8 grid max-w-xl grid-cols-2 gap-6">
+              <div className="border-r pr-6">
+                <div className="text-4xl font-black">{fmtPct(teacher.pct_would_take_again)}</div>
+                <div className="mt-1 text-sm text-neutral-700">Would take again</div>
+              </div>
+              <div className="pl-6">
+                <div className="text-4xl font-black">{fmt1(teacher.avg_difficulty)}</div>
+                <div className="mt-1 text-sm text-neutral-700">Level of Difficulty</div>
+              </div>
+            </div>
+
+            {/* Rate button (Compare removed) */}
+            <div className="mt-8 flex gap-4">
+              {isAuthed ? (
+                <a
+                  href="#rate"
+                  className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Rate <span className="ml-2">→</span>
+                </a>
+              ) : (
+                <a
+                  href={`/login?redirectTo=${encodeURIComponent(`/professor/${teacherId}#rate`)}`}
+                  className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Rate <span className="ml-2">→</span>
+                </a>
+              )}
+            </div>
+
+            {/* Top tags */}
+            <div className="mt-10">
+              <div className="text-lg font-semibold">{teacher.full_name}&apos;s Top Tags</div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {topTags.length === 0 ? (
+                  <div className="text-sm text-neutral-600">No tags yet.</div>
+                ) : (
+                  topTags.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-neutral-100 px-4 py-2 text-xs font-extrabold tracking-wide text-neutral-900"
+                    >
+                      {t}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* RIGHT PANEL: Rating Distribution */}
+          <section className="rounded-2xl bg-neutral-50 p-6">
+            <div className="text-lg font-semibold">Rating Distribution</div>
+
+            <div className="mt-6 space-y-5">
+              {[
+                { label: "Awesome", score: 5 },
+                { label: "Great", score: 4 },
+                { label: "Good", score: 3 },
+                { label: "OK", score: 2 },
+                { label: "Awful", score: 1 },
+              ].map(({ label, score }) => {
+                const c = counts[score as 1 | 2 | 3 | 4 | 5] ?? 0;
+                const pct = totalRatings > 0 ? (c / totalRatings) * 100 : 0;
+
+                return (
+                  <div key={score} className="grid grid-cols-[110px_1fr_44px] items-center gap-4">
+                    <div className="text-sm text-neutral-800">
+                      {label} <span className="font-semibold">{score}</span>
+                    </div>
+                    <div className="h-10 rounded bg-neutral-200">
+                      <div className="h-10 rounded bg-blue-600" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="text-right text-sm font-semibold text-neutral-900">{c}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+
+        {/* REVIEWS */}
+        <section id="ratings" className="mt-14">
+          <div className="text-lg font-semibold">{teacher.review_count ?? 0} Student Ratings</div>
+
+          {/* Course filter (like screenshot) */}
+          <div className="mt-4 w-44">
+            <select
+              value={selectedCourse || ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                const url = v ? `/professor/${teacherId}?course=${encodeURIComponent(v)}#ratings` : `/professor/${teacherId}#ratings`;
+                window.location.href = url;
+              }}
+              className="h-11 w-full rounded-xl border bg-white px-3 text-sm outline-none focus:ring"
+            >
+              <option value="">All courses</option>
+              {courseOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {reviewsErr ? (
+            <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+              Failed to load reviews: {reviewsErr.message}
+            </div>
+          ) : null}
+
+          <div className="mt-6 space-y-6">
+            {(reviews ?? []).length === 0 ? (
+              <div className="rounded-2xl border bg-white p-8 text-sm text-neutral-700">
+                No reviews yet.
+              </div>
+            ) : (
+              (reviews ?? []).map((r) => (
+                <div key={r.id} className="rounded-2xl border bg-white shadow-sm">
+                  <div className="flex gap-6 p-6">
+                    {/* left quality box */}
+                    <div className="w-28 shrink-0 text-center"
