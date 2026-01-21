@@ -98,8 +98,6 @@ export default async function ContactPage({
         <h1 className="text-3xl font-extrabold tracking-tight">Contact Us</h1>
         <p className="mt-2 text-sm text-neutral-700">
           Submit a ticket for help, partnerships, or suggestions.{" "}
-          <span className="font-semibold">Do not report emergencies here.</span> If someone is in danger, contact school
-          leadership or student support immediately.
         </p>
 
         {ok ? (
