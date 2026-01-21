@@ -4,16 +4,16 @@ export default function SiteFooter() {
     <footer className="border-t bg-white">
       <div className="mx-auto max-w-6xl px-4 py-8 text-xs text-neutral-600">
         <div className="flex flex-wrap justify-center gap-6">
-          <a className="hover:underline" href="#">
+          <a className="hover:underline" href="https://rmt-biph.com/site-guidelines">
             Site Guidelines
           </a>
-          <a className="hover:underline" href="#">
+          <a className="hover:underline" href="https://rmt-biph.com/terms-and-conditions">
             Terms &amp; Conditions
           </a>
-          <a className="hover:underline" href="#">
+          <a className="hover:underline" href="https://rmt-biph.com/privacy-policy">
             Privacy Policy
           </a>
-          <a className="hover:underline" href="#">
+          <a className="hover:underline" href="https://rmt-biph.com/contact">
             Contact Us
           </a>
         </div>
