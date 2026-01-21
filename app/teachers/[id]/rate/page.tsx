@@ -91,17 +91,6 @@ export default async function RatePage({ params }: { params: { id: string } }) {
         </div>
 
         <RateForm teacherId={teacherId} teacherSubject={teacher.subject ?? null} />
-
-        {/* Footer like screenshot */}
-        <footer className="mt-14 border-t py-8 text-xs text-neutral-600">
-          <div className="flex flex-wrap justify-center gap-6">
-            <a className="hover:underline" href="#guidelines">Help</a>
-            <a className="hover:underline" href="#guidelines">Site Guidelines</a>
-            <a className="hover:underline" href="#guidelines">Terms &amp; Conditions</a>
-            <a className="hover:underline" href="#guidelines">Privacy Policy</a>
-          </div>
-          <div className="mt-4 text-center text-neutral-500">© Rate My Teacher (BIPH internal)</div>
-        </footer>
       </div>
     </main>
   );
