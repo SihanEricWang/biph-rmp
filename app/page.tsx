@@ -14,13 +14,15 @@ export default function HomePage() {
 
         <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col items-center justify-center px-4 text-center text-white">
           {/* Logo badge */}
-          <div className="inline-flex items-center">
-            <div className="relative">
-              <div className="rounded-sm bg-black px-6 py-3 text-sm font-black tracking-[0.35em]">
-                RATE MY
-              </div>
-              <div className="absolute right-0 top-0 translate-x-[58%] rounded-sm bg-white px-6 py-3 text-sm font-black tracking-[0.35em] text-black">
-                TEACHER
+          <div className="flex w-full justify-center">
+            <div className="inline-flex items-center">
+              <div className="inline-flex overflow-hidden rounded-sm shadow-sm ring-1 ring-white/20">
+                <div className="whitespace-nowrap bg-black px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em]">
+                  RATE MY
+                </div>
+                <div className="whitespace-nowrap bg-white px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em] text-black">
+                  TEACHER
+                </div>
               </div>
             </div>
           </div>
@@ -90,7 +92,7 @@ export default function HomePage() {
             {/* illustration placeholder */}
             <div className="relative h-56 w-full max-w-sm overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_30%_30%,_rgba(253,230,138,0.9),_rgba(255,255,255,0)_60%)]">
               <div className="absolute inset-0 grid place-items-center">
-                <div className="rounded-2xl bg-white/70 px-5 py-3 text-xs font-bold text-neutral-800 shadow-sm">
+                <div className="rounded-2xl bg-white/70 px-6 py-4 text-4xl leading-none text-neutral-800 shadow-sm">
                   ✏️
                 </div>
               </div>
@@ -102,7 +104,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center text-center">
             <div className="relative h-56 w-full max-w-sm overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_50%_40%,_rgba(216,180,254,0.9),_rgba(255,255,255,0)_60%)]">
               <div className="absolute inset-0 grid place-items-center">
-                <div className="rounded-2xl bg-white/70 px-5 py-3 text-xs font-bold text-neutral-800 shadow-sm">
+                <div className="rounded-2xl bg-white/70 px-6 py-4 text-4xl leading-none text-neutral-800 shadow-sm">
                   🕶️
                 </div>
               </div>
@@ -114,7 +116,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center text-center">
             <div className="relative h-56 w-full max-w-sm overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_70%_35%,_rgba(147,197,253,0.9),_rgba(255,255,255,0)_60%)]">
               <div className="absolute inset-0 grid place-items-center">
-                <div className="rounded-2xl bg-white/70 px-5 py-3 text-xs font-bold text-neutral-800 shadow-sm">
+                <div className="rounded-2xl bg-white/70 px-6 py-4 text-4xl leading-none text-neutral-800 shadow-sm">
                   👍👎
                 </div>
               </div>
@@ -123,11 +125,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* simple footer */}
-      <footer className="border-t py-10 text-center text-xs text-neutral-500">
-        © {new Date().getFullYear()} Rate My Teacher — BIPH internal
-      </footer>
     </main>
   );
 }
