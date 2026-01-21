@@ -43,10 +43,7 @@ export default async function EditMyRatingPage({
     redirect(`/me/ratings?error=${encodeURIComponent("Review not found (or you don't own it).")}`);
   }
 
-  /**
-   * Supabase 的嵌套 select 在类型推断里可能是数组（即使逻辑上是 1 个 teacher）。
-   * 这里做归一化：teacherObj 始终是单个对象或 undefined。
-   */
+  // ✅ Supabase 嵌套 select 类型推断可能是数组；统一归一化为单对象
   const teacherObj = Array.isArray(review.teacher) ? review.teacher[0] : review.teacher;
 
   const tagsText = Array.isArray(review.tags) ? review.tags.join(", ") : "";
@@ -184,7 +181,6 @@ export default async function EditMyRatingPage({
             </div>
           </form>
 
-          {/* Separate, non-nested form for delete (valid HTML) */}
           <form action={deleteMyReview} className="mt-4 flex justify-end">
             <input type="hidden" name="reviewId" value={review.id} />
             <ConfirmDeleteButton className="rounded-xl border border-rose-300 bg-rose-50 px-5 py-2.5 text-sm text-rose-800 hover:bg-rose-100">
