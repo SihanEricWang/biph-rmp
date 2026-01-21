@@ -45,8 +45,10 @@ export default async function MyRatingsPage({
           <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
             RMT
           </a>
-          <div className="text-sm font-semibold">My Ratings</div>
-          <div className="ml-auto text-sm font-extrabold tracking-wide">HEY, {heyName}</div>
+          <div className="text-sm font-semibold">My Tickets</div>
+          <div className="ml-auto">
+            <HeyMenu heyName={heyName} isAuthed={true} />
+          </div>
         </div>
       </header>
 
