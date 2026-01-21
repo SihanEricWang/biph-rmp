@@ -200,8 +200,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <p className="mt-6 text-xs text-neutral-500">
-            Supabase setup reminder: enable Email confirmations and add{" "}
-            <span className="font-mono">/auth/callback</span> to Redirect URLs.
+            Your ratings are always anonymous.
           </p>
         </div>
       </div>
