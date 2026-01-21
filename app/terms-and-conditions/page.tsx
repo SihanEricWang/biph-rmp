@@ -234,11 +234,7 @@ export default function TermsAndConditionsPage() {
 
           <div className="rounded-xl border bg-white px-4 py-3 text-xs text-neutral-600">
             <p className="font-semibold">Note</p>
-            <p className="mt-1">
-              This page is a tailored template based on a generic Terms-of-Use structure. If you intend to publish this
-              as legally binding terms, have it reviewed by appropriate school administration and/or legal counsel for
-              your jurisdiction.
-            </p>
+            
           </div>
         </div>
       </div>
