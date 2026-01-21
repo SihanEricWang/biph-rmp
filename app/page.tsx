@@ -77,8 +77,7 @@ export default function HomePage() {
             <span className="font-semibold">Rate My Teacher</span> is a school-only rating site built specifically for{" "}
             <span className="font-semibold">BIPH</span>. Browse teacher pages freely, and sign in with your{" "}
             <span className="font-mono">@basischina.com</span> email to post ratings and tags.{" "}
-            <span className="font-semibold">This is an anonymous student-operated website.</span>{" "}
-            <span className="font-semibold">Feel FREE to speak anything.</span>
+            <span className="font-semibold">This is an anonymous student-operated website. Feel FREE to speak anything.</span>
           </p>
         </div>
 
