@@ -40,7 +40,6 @@ export default async function MyRatingsPage({
 
   return (
     <main className="min-h-screen bg-neutral-50">
-      {/* Top nav */}
       <header className="bg-black text-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
           <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
@@ -90,64 +89,73 @@ export default async function MyRatingsPage({
               </div>
             </div>
           ) : (
-            (rows ?? []).map((r: any) => (
-              <div key={r.id} className="rounded-2xl border bg-white p-6 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-xl font-extrabold tracking-tight">{r.teacher?.full_name ?? "Unknown Teacher"}</div>
-                    <div className="mt-1 text-sm text-neutral-600">
-                      {r.teacher?.subject ?? "—"} ·{" "}
-                      <a className="underline underline-offset-2" href={`/teachers/${r.teacher_id}`}>
-                        View teacher page
+            (rows ?? []).map((r: any) => {
+              const teacherObj = Array.isArray(r.teacher) ? r.teacher[0] : r.teacher;
+
+              return (
+                <div key={r.id} className="rounded-2xl border bg-white p-6 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-xl font-extrabold tracking-tight">
+                        {teacherObj?.full_name ?? "Unknown Teacher"}
+                      </div>
+                      <div className="mt-1 text-sm text-neutral-600">
+                        {teacherObj?.subject ?? "—"} ·{" "}
+                        <a className="underline underline-offset-2" href={`/teachers/${r.teacher_id}`}>
+                          View teacher page
+                        </a>
+                      </div>
+                      <div className="mt-2 text-xs text-neutral-500">
+                        Posted {formatDate(r.created_at)}
+                        {r.course ? ` · ${String(r.course).toUpperCase()}` : ""}
+                        {r.is_online ? " · Online" : ""}
+                        {r.grade ? ` · Grade: ${r.grade}` : ""}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <a
+                        href={`/me/ratings/${r.id}/edit`}
+                        className="rounded-xl border bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+                      >
+                        Edit
                       </a>
+
+                      <form action={deleteMyReview}>
+                        <input type="hidden" name="reviewId" value={r.id} />
+                        <ConfirmDeleteButton className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm text-rose-800 hover:bg-rose-100">
+                          Delete
+                        </ConfirmDeleteButton>
+                      </form>
                     </div>
-                    <div className="mt-2 text-xs text-neutral-500">
-                      Posted {formatDate(r.created_at)}
-                      {r.course ? ` · ${String(r.course).toUpperCase()}` : ""}
-                      {r.is_online ? " · Online" : ""}
-                      {r.grade ? ` · Grade: ${r.grade}` : ""}
+                  </div>
+
+                  <div className="mt-4 text-sm text-neutral-800">
+                    <span className="font-semibold">Quality:</span> {r.quality}/5
+                    <span className="mx-2 text-neutral-300">|</span>
+                    <span className="font-semibold">Difficulty:</span> {r.difficulty}/5
+                    <span className="mx-2 text-neutral-300">|</span>
+                    <span className="font-semibold">Would take again:</span> {r.would_take_again ? "Yes" : "No"}
+                  </div>
+
+                  {Array.isArray(r.tags) && r.tags.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {r.tags.map((t: string) => (
+                        <span key={t} className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800">
+                          {t}
+                        </span>
+                      ))}
                     </div>
-                  </div>
+                  ) : null}
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    <a href={`/me/ratings/${r.id}/edit`} className="rounded-xl border bg-white px-4 py-2 text-sm hover:bg-neutral-50">
-                      Edit
-                    </a>
-
-                    <form action={deleteMyReview}>
-                      <input type="hidden" name="reviewId" value={r.id} />
-                      <ConfirmDeleteButton className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm text-rose-800 hover:bg-rose-100">
-                        Delete
-                      </ConfirmDeleteButton>
-                    </form>
-                  </div>
+                  {r.comment ? (
+                    <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
+                  ) : (
+                    <p className="mt-4 text-sm text-neutral-500">No comment.</p>
+                  )}
                 </div>
-
-                <div className="mt-4 text-sm text-neutral-800">
-                  <span className="font-semibold">Quality:</span> {r.quality}/5
-                  <span className="mx-2 text-neutral-300">|</span>
-                  <span className="font-semibold">Difficulty:</span> {r.difficulty}/5
-                  <span className="mx-2 text-neutral-300">|</span>
-                  <span className="font-semibold">Would take again:</span> {r.would_take_again ? "Yes" : "No"}
-                </div>
-
-                {Array.isArray(r.tags) && r.tags.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {r.tags.map((t: string) => (
-                      <span key={t} className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                {r.comment ? (
-                  <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
-                ) : (
-                  <p className="mt-4 text-sm text-neutral-500">No comment.</p>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
