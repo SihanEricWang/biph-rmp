@@ -23,7 +23,7 @@ export default function ReviewVoteButtons({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const redirectTo = `/professor/${teacherId}#ratings`;
+  const redirectTo = `/teachers/${teacherId}#ratings`;
 
   function submit(op: "up" | "down" | "clear") {
     const fd = new FormData();
