@@ -1,109 +1,76 @@
-// app/teachers/[id]/rate/page.tsx
-import { redirect, notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 import RateForm from "@/components/RateForm";
+import Link from "next/link";
 
-function emailToHey(email?: string | null) {
-  if (!email) return "GUEST";
-  const name = email.split("@")[0] || "USER";
-  return name.replaceAll(".", " ").toUpperCase();
-}
+export default async function RateTeacherPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const supabase = createClient();
 
-export default async function RatePage({ params }: { params: { id: string } }) {
-  const supabase = createSupabaseServerClient();
-  const teacherId = params.id;
+  const { data: teacher, error } = await supabase
+    .from("teachers")
+    .select("*")
+    .eq("id", params.id)
+    .single();
 
-  // auth gate
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
-
-  if (!user) {
-    redirect(`/login?redirectTo=${encodeURIComponent(`/teachers/${teacherId}/rate`)}`);
+  if (error || !teacher) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <h1 className="text-2xl font-semibold">Teacher not found</h1>
+        <p className="mt-2 text-sm text-neutral-600">
+          We couldn&apos;t find that teacher.
+        </p>
+        <div className="mt-6">
+          <Link
+            href="/teachers"
+            className="inline-flex items-center rounded-md border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50"
+          >
+            Back to teachers
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  // load teacher
-  const { data: teacher, error: tErr } = await supabase
-    .from("teachers")
-    .select("id, full_name, subject")
-    .eq("id", teacherId)
-    .maybeSingle();
+  const subjectRaw = (teacher.subject ?? "") as string;
 
-  if (tErr || !teacher) notFound();
+  // Support delimited subject strings like:
+  // "Math, Physics" | "Math/Physics" | "Math | Physics" | "Math;Physics"
+  const subjectOptions = subjectRaw
+    .split(/[,;|/]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  const heyName = emailToHey(user.email);
+  // If subject is a single string with no delimiter, keep it.
+  if (subjectOptions.length === 0 && subjectRaw.trim().length > 0) {
+    subjectOptions.push(subjectRaw.trim());
+  }
 
   return (
-    <main className="min-h-screen bg-neutral-50">
-      {/* Top nav */}
-      <header className="bg-black text-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <a
-            href={`/teachers/${teacherId}`}
-            className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
-          >
-            ← Back
-          </a>
-
-          <a
-            href="/teachers"
-            className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
-          >
-            RMT
-          </a>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="text-sm font-semibold">Teachers</div>
-            <form action="/teachers" className="relative">
-              <input
-                name="q"
-                placeholder="Teacher name"
-                className="h-9 w-[380px] rounded-full bg-white/10 px-4 text-sm outline-none placeholder:text-white/60 focus:bg-white/15"
-              />
-            </form>
-            <div className="text-sm text-white/70">at</div>
-            <div className="text-sm font-semibold underline underline-offset-2 decoration-white/40">
-              BIPH
-            </div>
-          </div>
-
-          <div className="ml-auto flex items-center gap-4">
-            <div className="text-sm font-extrabold tracking-wide">HEY, {heyName}</div>
-            <a
-              href="#guidelines"
-              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black hover:opacity-90"
-            >
-              Help
-            </a>
-          </div>
-        </div>
-      </header>
-
-      {/* Page header */}
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-8">
-          <div className="text-5xl font-extrabold tracking-tight">{teacher.full_name}</div>
-          <div className="text-2xl font-medium text-neutral-800">Add Rating</div>
-          <div className="mt-2 text-sm text-neutral-700">
-            <span className="font-semibold">{teacher.subject ?? "—"}</span>
-            <span className="mx-2 text-neutral-300">·</span>
-            <span className="underline underline-offset-2 decoration-neutral-300">BIPH</span>
-          </div>
-        </div>
-
-        {/* ✅ subject is passed in; courseSuggestions removed */}
-        <RateForm teacherId={teacherId} teacherSubject={teacher.subject} />
-
-        {/* Footer */}
-        <footer className="mt-14 border-t py-8 text-xs text-neutral-600" id="guidelines">
-          <div className="flex flex-wrap justify-center gap-6">
-            <a className="hover:underline" href="#guidelines">Help</a>
-            <a className="hover:underline" href="#guidelines">Site Guidelines</a>
-            <a className="hover:underline" href="#guidelines">Terms &amp; Conditions</a>
-            <a className="hover:underline" href="#guidelines">Privacy Policy</a>
-          </div>
-          <div className="mt-4 text-center text-neutral-500">© Rate My Teacher (BIPH internal)</div>
-        </footer>
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      {/* Back button (not in header) */}
+      <div className="mb-6 flex items-center justify-between">
+        <Link
+          href={`/teachers/${teacher.id}`}
+          className="inline-flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50"
+        >
+          <span aria-hidden>←</span>
+          Back
+        </Link>
       </div>
-    </main>
+
+      <h1 className="text-3xl font-semibold tracking-tight">
+        Rate {teacher.name}
+      </h1>
+      <p className="mt-2 text-sm text-neutral-600">
+        Share your experience to help other students.
+      </p>
+
+      <div className="mt-8">
+        <RateForm teacherId={teacher.id} subjectOptions={subjectOptions} />
+      </div>
+    </div>
   );
 }
