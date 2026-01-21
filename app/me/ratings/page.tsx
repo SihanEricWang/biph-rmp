@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import ConfirmDeleteButton from "@/components/ui/ConfirmDeleteButton";
 import { deleteMyReview } from "@/lib/actions";
+import HeyMenu from "@/components/HeyMenu";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
