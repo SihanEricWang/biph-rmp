@@ -20,7 +20,7 @@ export default function Header({
     <header className="bg-black text-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
         <a
-          href="#"
+          href="https://rmt-biph.com/"
           className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
         >
           RMT
