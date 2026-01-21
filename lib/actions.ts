@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createSupabaseServerActionClient } from "./supabase";
+import { createSupabaseServerClient } from "./supabase";
 
 const ALLOWED_DOMAIN_SUFFIX = "@basischina.com";
 
@@ -61,9 +61,34 @@ function teacherRatePage(teacherId: string) {
   return `/teachers/${encodeURIComponent(teacherId)}/rate`;
 }
 
+/**
+ * Best-effort Site URL builder for Supabase emailRedirectTo
+ * Priority:
+ * 1) NEXT_PUBLIC_SITE_URL (recommended, full https://domain)
+ * 2) NEXT_PUBLIC_VERCEL_URL (usually domain only, add https://)
+ * 3) request headers (x-forwarded-proto/host)
+ * 4) localhost (dev)
+ */
+function getSiteURL(): string {
+  const envSite = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (envSite) return envSite.replace(/\/+$/, "");
+
+  const vercel = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
+  if (vercel) {
+    const withProto = vercel.startsWith("http") ? vercel : `https://${vercel}`;
+    return withProto.replace(/\/+$/, "");
+  }
+
+  const h = headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) return `${proto}://${host}`.replace(/\/+$/, "");
+
+  return "http://localhost:3000";
+}
+
 async function requireInternalUserOrRedirect(redirectTo?: string) {
-  // ✅ Server Action client: allowed to set cookies (refresh/sign-in/out)
-  const supabase = createSupabaseServerActionClient();
+  const supabase = createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
   const user = data.user;
 
@@ -79,6 +104,22 @@ async function requireInternalUserOrRedirect(redirectTo?: string) {
   return { supabase, user };
 }
 
+/**
+ * For rate page: you changed "course" to "subject".
+ * This keeps backward compatibility:
+ * - prefer subject
+ * - fallback to course
+ */
+function getSubjectOrCourse(formData: FormData): { value: string; source: "subject" | "course" | "none" } {
+  const subject = str(formData.get("subject"));
+  if (subject) return { value: subject, source: "subject" };
+
+  const course = str(formData.get("course"));
+  if (course) return { value: course, source: "course" };
+
+  return { value: "", source: "none" };
+}
+
 // --------------------
 // Auth actions (used by app/login/page.tsx)
 // --------------------
@@ -91,16 +132,20 @@ export async function signInWithPassword(formData: FormData) {
 
   if (!email || !password) {
     redirect(
-      `/login?error=${encodeURIComponent("Email and password are required.")}&redirectTo=${encodeURIComponent(redirectTo)}`
+      `/login?error=${encodeURIComponent("Email and password are required.")}&redirectTo=${encodeURIComponent(
+        redirectTo
+      )}`
     );
   }
   if (!email.endsWith(ALLOWED_DOMAIN_SUFFIX)) {
     redirect(
-      `/login?error=${encodeURIComponent("Only internal emails are allowed.")}&redirectTo=${encodeURIComponent(redirectTo)}`
+      `/login?error=${encodeURIComponent("Only internal emails are allowed.")}&redirectTo=${encodeURIComponent(
+        redirectTo
+      )}`
     );
   }
 
-  const supabase = createSupabaseServerActionClient();
+  const supabase = createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -128,17 +173,13 @@ export async function signUpWithEmailAndPassword(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Passwords do not match.")}`);
   }
 
-  // Build origin for email redirect (best-effort)
-  const h = headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const origin = host ? `${proto}://${host}` : null;
+  const origin = getSiteURL();
 
-  const supabase = createSupabaseServerActionClient();
+  const supabase = createSupabaseServerClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: origin ? { emailRedirectTo: `${origin}/auth/callback` } : undefined,
+    options: { emailRedirectTo: `${origin}/auth/callback` },
   });
 
   if (error) {
@@ -149,7 +190,7 @@ export async function signUpWithEmailAndPassword(formData: FormData) {
 }
 
 export async function signOut() {
-  const supabase = createSupabaseServerActionClient();
+  const supabase = createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/teachers");
 }
@@ -168,14 +209,21 @@ export async function createReview(formData: FormData) {
   const wouldTakeAgainRaw = str(formData.get("wouldTakeAgain")).toLowerCase();
   const would_take_again = wouldTakeAgainRaw === "yes" ? true : wouldTakeAgainRaw === "no" ? false : null;
 
+  // subject/course (new: subject; old: course)
+  const subjectOrCourse = getSubjectOrCourse(formData);
+  const courseValue = subjectOrCourse.value;
+
   // optional metadata
-  const course = str(formData.get("course")); // ✅ front-end 的 subject 会写到这里
   const grade = str(formData.get("grade"));
-  const isOnline = bool01(getLast(formData, "isOnline"));
+
+  // online flag is now removed from rate page; keep backward compatibility
+  const hasIsOnline = formData.has("isOnline");
+  const isOnline = hasIsOnline ? bool01(getLast(formData, "isOnline")) : false;
+
   const comment = str(formData.get("comment"));
 
   // server-enforced knobs (sent by RateForm)
-  const requireCourse = bool01(str(formData.get("requireCourse")));
+  const requireCourse = bool01(str(formData.get("requireCourse"))) || bool01(str(formData.get("requireSubject")));
   const requireComment = bool01(str(formData.get("requireComment")));
   const maxTags = Math.min(10, Math.max(0, Math.trunc(num(str(formData.get("maxTags"))) ?? 10)));
   const commentLimit = Math.min(1200, Math.max(50, Math.trunc(num(str(formData.get("commentLimit"))) ?? 1200)));
@@ -195,7 +243,8 @@ export async function createReview(formData: FormData) {
   if (difficulty === null)
     redirect(`${teacherRatePage(teacherId)}?error=${encodeURIComponent("Difficulty must be 1-5.")}`);
 
-  if (requireCourse && !course) {
+  if (requireCourse && !courseValue) {
+    // New UI is "select subject", so message should match that.
     redirect(`${teacherRatePage(teacherId)}?error=${encodeURIComponent("Subject is required.")}`);
   }
   if (requireComment && !comment) {
@@ -220,7 +269,8 @@ export async function createReview(formData: FormData) {
     would_take_again: wta,
     comment: comment || null,
     tags,
-    course: course || null,
+    // stored in `course` column for backward compatibility even if UI label is "subject"
+    course: courseValue || null,
     grade: grade || null,
     is_online: isOnline,
   });
@@ -240,10 +290,18 @@ export async function updateMyReview(formData: FormData) {
 
   const quality = intInRange(str(formData.get("quality")), 1, 5);
   const difficulty = intInRange(str(formData.get("difficulty")), 1, 5);
+
   const wouldTakeAgain = str(formData.get("wouldTakeAgain")).toLowerCase();
-  const course = str(formData.get("course")); // ✅ subject 存这里
+
+  // edit page currently uses "course"; allow "subject" too (future-proof)
+  const { value: courseValue } = getSubjectOrCourse(formData);
+
   const grade = str(formData.get("grade"));
-  const isOnline = bool01(getLast(formData, "isOnline"));
+
+  // IMPORTANT: do not accidentally clear is_online if the field is removed from the edit form later
+  const hasIsOnline = formData.has("isOnline");
+  const isOnline = hasIsOnline ? bool01(getLast(formData, "isOnline")) : undefined;
+
   const comment = str(formData.get("comment"));
 
   const tagsRaw = str(formData.get("tags"));
@@ -263,8 +321,9 @@ export async function updateMyReview(formData: FormData) {
   if (wouldTakeAgain !== "yes" && wouldTakeAgain !== "no") {
     redirect(`${editPath}?error=${encodeURIComponent("Would take again is required.")}`);
   }
-  if (!course) {
-    redirect(`${editPath}?error=${encodeURIComponent("Subject is required.")}`);
+  if (!courseValue) {
+    // edit page still says Course code (unless你也改了它)
+    redirect(`${editPath}?error=${encodeURIComponent("Course code is required.")}`);
   }
   if (comment.length > 1200) {
     redirect(`${editPath}?error=${encodeURIComponent("Comment is too long (max 1200).")}`);
@@ -272,18 +331,21 @@ export async function updateMyReview(formData: FormData) {
 
   const { supabase, user } = await requireInternalUserOrRedirect(editPath);
 
+  const updatePayload: Record<string, unknown> = {
+    quality,
+    difficulty,
+    would_take_again: wouldTakeAgain === "yes",
+    course: courseValue || null,
+    grade: grade || null,
+    tags,
+    comment: comment || null,
+  };
+
+  if (hasIsOnline) updatePayload.is_online = isOnline;
+
   const { data: updated, error } = await supabase
     .from("reviews")
-    .update({
-      quality,
-      difficulty,
-      would_take_again: wouldTakeAgain === "yes",
-      course: course || null,
-      grade: grade || null,
-      is_online: isOnline,
-      tags,
-      comment: comment || null,
-    })
+    .update(updatePayload)
     .eq("id", reviewId)
     .eq("user_id", user.id)
     .select("teacher_id")
