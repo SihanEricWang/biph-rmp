@@ -137,7 +137,7 @@ export async function updateReview(input: {
   }
 
   if (!course) {
-    return { error: "Course code is required." };
+    return { error: "Subject is required." };
   }
 
   if (!rating || rating < 1) {
