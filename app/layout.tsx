@@ -1,5 +1,6 @@
 // app/layout.tsx
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import SiteFooter from "@/components/SiteFooter";
 
 export const metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex-1">{children}</div>
           <SiteFooter />
         </div>
+        <Analytics />
       </body>
     </html>
   );
