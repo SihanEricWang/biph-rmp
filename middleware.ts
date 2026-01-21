@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -32,14 +32,16 @@ export function middleware(request: NextRequest) {
     }
   );
 
-  // Touch auth so Supabase can refresh session cookies if needed
-  // (no need to await anything else)
-  void supabase.auth.getUser();
+  // ✅ 必须 await：让 Supabase 有机会刷新 session 并把 Set-Cookie 写进 response
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Supabase 临时不可达时不阻塞页面（按游客渲染）
+  }
 
   return response;
 }
 
-// Limit middleware to paths that matter (avoid static files)
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
