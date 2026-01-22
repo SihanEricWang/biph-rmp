@@ -1,4 +1,4 @@
-// components/ReviewVoteButtons.tsx (只替换未登录分支即可；给你整文件版更省事)
+// components/ReviewVoteButtons.tsx
 "use client";
 
 import Link from "next/link";
@@ -42,18 +42,10 @@ export default function ReviewVoteButtons({
   if (!isAuthed) {
     return (
       <div className="mt-4 flex items-center gap-5 text-sm text-neutral-600">
-        <Link
-          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-neutral-50"
-          href={loginHref}
-          prefetch
-        >
+        <Link className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-neutral-50" href={loginHref} prefetch>
           👍 <span className="font-semibold">{upvotes}</span>
         </Link>
-        <Link
-          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-neutral-50"
-          href={loginHref}
-          prefetch
-        >
+        <Link className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-neutral-50" href={loginHref} prefetch>
           👎 <span className="font-semibold">{downvotes}</span>
         </Link>
         <span className="text-xs text-neutral-500">(Sign in to vote)</span>
