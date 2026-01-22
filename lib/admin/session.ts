@@ -5,10 +5,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const COOKIE_NAME = "rmt_admin";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 天
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 type AdminSessionPayload = {
-  u: string; // username
+  u: string;
   iat: number;
   exp: number;
 };
@@ -20,11 +20,7 @@ function mustGetEnv(name: string): string {
 }
 
 function base64urlEncode(buf: Buffer) {
-  return buf
-    .toString("base64")
-    .replaceAll("=", "")
-    .replaceAll("+", "-")
-    .replaceAll("/", "_");
+  return buf.toString("base64").replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
 }
 
 function base64urlDecode(s: string) {
@@ -57,7 +53,6 @@ export function verifyAdminToken(token: string | undefined | null): AdminSession
 
   const [body, sig] = parts;
   const expected = base64urlEncode(hmacSha256(mustGetEnv("ADMIN_COOKIE_SECRET"), body));
-
   if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
 
   try {
@@ -71,7 +66,6 @@ export function verifyAdminToken(token: string | undefined | null): AdminSession
   }
 }
 
-/** 只用于后台保护区：没登录直接跳 /admin/login */
 export function requireAdmin(nextPath?: string) {
   const token = cookies().get(COOKIE_NAME)?.value;
   const payload = verifyAdminToken(token);
@@ -103,7 +97,6 @@ export function clearAdminSession() {
   });
 }
 
-/** 防 open redirect：只允许站内相对路径 */
 export function safeNextPath(p: string, fallback = "/admin/teachers") {
   const s = (p || "").trim();
   if (!s.startsWith("/")) return fallback;
