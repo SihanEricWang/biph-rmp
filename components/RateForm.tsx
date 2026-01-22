@@ -28,7 +28,7 @@ const TAG_OPTIONS = [
   "ONLINE SAVVY",
 ];
 
-const GRADE_OPTIONS = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "P", "NP"];
+const GRADE_OPTIONS = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "P", "NP"];
 
 export default function RateForm({
   teacherId,
@@ -246,7 +246,7 @@ export default function RateForm({
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <p className="text-center text-xs text-neutral-600">
           By clicking the &quot;Submit&quot; button, you acknowledge that you have read and agreed to the site
-          guidelines and terms. (Internal project for BIPH)
+          guidelines and terms.
         </p>
 
         <div className="mt-5 flex justify-center">
