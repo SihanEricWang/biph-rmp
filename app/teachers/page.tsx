@@ -30,20 +30,15 @@ export default async function TeachersPage({ searchParams }: PageProps) {
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
   const from = (page - 1) * pageSize;
 
-  // ✅ 并行：用户信息 + subjects + teacher list
   const userPromise = supabase.auth.getUser();
 
-  const subjectsPromise = supabase
-    .from("teachers")
-    .select("subject")
-    .order("subject", { ascending: true });
+  const subjectsPromise = supabase.from("teachers").select("subject").order("subject", { ascending: true });
 
   let listQuery = supabase
     .from("teacher_list")
     .select("id, full_name, subject, avg_quality, review_count, pct_would_take_again, avg_difficulty")
     .order("review_count", { ascending: false })
     .order("full_name", { ascending: true })
-    // ✅ 多取 1 条，用来判断下一页是否存在（替代 exact count）
     .range(from, from + pageSize);
 
   if (q) listQuery = listQuery.ilike("full_name", `%${q}%`);
@@ -104,7 +99,6 @@ export default async function TeachersPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* pagination */}
         {(hasPrev || hasNext) ? (
           <div className="mt-10 flex items-center justify-between text-sm">
             <Link
