@@ -55,8 +55,6 @@ export default function AdminLoginPage({
               Sign in
             </button>
           </form>
-
-          <div className="mt-4 text-xs text-neutral-500">Tip: credentials are set via .env.local</div>
         </div>
       </div>
     </main>
