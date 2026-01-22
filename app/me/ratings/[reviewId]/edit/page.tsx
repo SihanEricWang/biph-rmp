@@ -1,4 +1,5 @@
 // app/me/ratings/[reviewId]/edit/page.tsx
+import Link from "next/link";
 import ConfirmDeleteButton from "@/components/ui/ConfirmDeleteButton";
 import StarRating from "@/components/ui/StarRating";
 import { deleteMyReview, updateMyReview } from "@/lib/actions";
@@ -11,7 +12,7 @@ function emailToHey(email?: string | null) {
   return name.replaceAll(".", " ").toUpperCase();
 }
 
-const GRADE_OPTIONS = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "P", "NP"];
+const GRADE_OPTIONS = ["", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "P", "NP"];
 
 export default async function EditMyRatingPage({
   params,
@@ -43,21 +44,29 @@ export default async function EditMyRatingPage({
     redirect(`/me/ratings?error=${encodeURIComponent("Review not found (or you don't own it).")}`);
   }
 
-  // ✅ Supabase 嵌套 select 类型推断可能是数组；统一归一化为单对象
   const teacherObj = Array.isArray(review.teacher) ? review.teacher[0] : review.teacher;
-
   const tagsText = Array.isArray(review.tags) ? review.tags.join(", ") : "";
 
   return (
     <main className="min-h-screen bg-neutral-50">
       <header className="bg-black text-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
+          <Link
+            href="/teachers"
+            className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
+            prefetch
+          >
             RMT
-          </a>
-          <a href="/me/ratings" className="text-sm font-semibold underline underline-offset-2 decoration-white/40">
+          </Link>
+
+          <Link
+            href="/me/ratings"
+            className="text-sm font-semibold underline underline-offset-2 decoration-white/40"
+            prefetch
+          >
             My Ratings
-          </a>
+          </Link>
+
           <div className="ml-auto text-sm font-extrabold tracking-wide">HEY, {heyName}</div>
         </div>
       </header>
@@ -76,9 +85,13 @@ export default async function EditMyRatingPage({
             <span className="mx-2 text-neutral-300">·</span>
             {teacherObj?.subject ?? "—"}
             <span className="mx-2 text-neutral-300">·</span>
-            <a className="underline underline-offset-2" href={`/teachers/${review.teacher_id}`}>
+            <Link
+              className="underline underline-offset-2"
+              href={`/teachers/${review.teacher_id}`}
+              prefetch
+            >
               View teacher page
-            </a>
+            </Link>
           </div>
 
           <form action={updateMyReview} className="mt-6 space-y-5">
@@ -175,9 +188,14 @@ export default async function EditMyRatingPage({
               <button type="submit" className="rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white hover:opacity-90">
                 Save changes
               </button>
-              <a href="/me/ratings" className="rounded-xl border bg-white px-5 py-2.5 text-sm hover:bg-neutral-50">
+
+              <Link
+                href="/me/ratings"
+                className="rounded-xl border bg-white px-5 py-2.5 text-sm hover:bg-neutral-50"
+                prefetch
+              >
                 Cancel
-              </a>
+              </Link>
             </div>
           </form>
 
