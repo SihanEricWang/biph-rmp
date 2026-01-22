@@ -1,4 +1,5 @@
 // app/me/tickets/page.tsx
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import HeyMenu from "@/components/HeyMenu";
@@ -54,9 +55,13 @@ export default async function MyTicketsPage() {
     <main className="min-h-screen bg-neutral-50">
       <header className="bg-black text-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-          <a href="/teachers" className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black">
+          <Link
+            href="/teachers"
+            className="rounded bg-white px-2 py-1 text-xs font-black tracking-widest text-black"
+            prefetch
+          >
             RMT
-          </a>
+          </Link>
 
           <div className="text-sm font-semibold">My Tickets</div>
 
@@ -75,9 +80,13 @@ export default async function MyTicketsPage() {
             </div>
           </div>
 
-          <a href="/contact" className="rounded-xl border bg-white px-4 py-2 text-sm hover:bg-neutral-50">
+          <Link
+            href="/contact"
+            className="rounded-xl border bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+            prefetch
+          >
             New Ticket
-          </a>
+          </Link>
         </div>
 
         {error ? (
@@ -91,9 +100,9 @@ export default async function MyTicketsPage() {
             <div className="rounded-2xl border bg-white p-8 text-sm text-neutral-700">
               You haven’t submitted any tickets yet.
               <div className="mt-4">
-                <a className="rounded-lg bg-black px-4 py-2 text-white" href="/contact">
+                <Link className="rounded-lg bg-black px-4 py-2 text-white" href="/contact" prefetch>
                   Create one
-                </a>
+                </Link>
               </div>
             </div>
           ) : (
@@ -102,10 +111,11 @@ export default async function MyTicketsPage() {
                 t.category === "Other" && t.category_other ? `Other: ${t.category_other}` : (t.category as string);
 
               return (
-                <a
+                <Link
                   key={t.id}
                   href={`/me/tickets/${t.id}`}
                   className="block rounded-2xl border bg-white p-6 shadow-sm transition hover:bg-neutral-50"
+                  prefetch
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
@@ -124,7 +134,7 @@ export default async function MyTicketsPage() {
                       </span>
                     </div>
                   </div>
-                </a>
+                </Link>
               );
             })
           )}
