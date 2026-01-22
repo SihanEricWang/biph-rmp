@@ -42,11 +42,13 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 // middleware.ts 底部
+// middleware.ts
 export const config = {
-  matcher: ["/me/:path*", "/admin/:path*", "/teachers/:path*"],
+  matcher: [
+    "/me/:path*",
+    "/admin/:path*",
+    "/teachers/:path*",
+    "/((?!_next/static|_next/image|favicon.ico).*)"
+  ],
 };
 
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};
