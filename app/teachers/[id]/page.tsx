@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import ReviewVoteButtons from "@/components/ReviewVoteButtons";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 function ratingClass(avg: number | null) {
   if (avg === null) return "bg-neutral-200 text-neutral-900";
@@ -45,30 +46,94 @@ function emailToHey(email?: string | null) {
   return name.replaceAll(".", " ").toUpperCase();
 }
 
+type TeacherRow = {
+  id: string;
+  full_name: string | null;
+  subject: string | null;
+  avg_quality: number | null;
+  review_count: number | null;
+  pct_would_take_again: number | null;
+  avg_difficulty: number | null;
+};
+
+type DistRow = { q5: number | null; q4: number | null; q3: number | null; q2: number | null; q1: number | null };
+
+type TagRow = { tag: string | null; cnt: number | null };
+type CourseRow = { course: string | null };
+
+type ReviewRow = {
+  id: string;
+  quality: number | null;
+  difficulty: number | null;
+  would_take_again: boolean | null;
+  comment: string | null;
+  tags: string[] | null;
+  course: string | null;
+  created_at: string;
+};
+
 export default async function TeacherPage({ params, searchParams }: PageProps) {
   const supabase = createSupabaseServerClient();
   const teacherId = params.id;
 
+  const selectedCourse = (searchParams?.course ?? "").trim();
+
+  // Auth (independent)
   const { data: userData } = await supabase.auth.getUser();
   const isAuthed = !!userData.user;
   const heyName = emailToHey(userData.user?.email);
 
-  // main teacher stats (from aggregated view)
+  // 1) Fetch teacher first (needed for maxReviewsToFetch)
   const { data: teacher, error: teacherErr } = await supabase
     .from("teacher_list")
     .select("id, full_name, subject, avg_quality, review_count, pct_would_take_again, avg_difficulty")
     .eq("id", teacherId)
-    .maybeSingle();
+    .maybeSingle<TeacherRow>();
 
   if (teacherErr || !teacher) notFound();
 
-  // rating distribution
-  const { data: dist } = await supabase
-    .from("teacher_quality_distribution")
-    .select("q5,q4,q3,q2,q1")
-    .eq("teacher_id", teacherId)
-    .maybeSingle();
+  // Cap reviews to keep payload reasonable
+  const maxReviewsToFetch = Math.min(Number(teacher.review_count ?? 200) || 200, 1000);
 
+  // 2) Fetch the rest in parallel to reduce TTFB / “卡顿”
+  const [distRes, topTagsRes, courseRowsRes, reviewsRes] = await Promise.all([
+    supabase
+      .from("teacher_quality_distribution")
+      .select("q5,q4,q3,q2,q1")
+      .eq("teacher_id", teacherId)
+      .maybeSingle<DistRow>(),
+
+    supabase
+      .from("teacher_top_tags")
+      .select("tag,cnt")
+      .eq("teacher_id", teacherId)
+      .order("cnt", { ascending: false })
+      .limit(10),
+
+    // Note: keeping logic same (still reads from reviews),
+    // but we avoid extra work where possible.
+    supabase.from("reviews").select("course").eq("teacher_id", teacherId).not("course", "is", null),
+
+    (() => {
+      let q = supabase
+        .from("reviews")
+        .select("id, quality, difficulty, would_take_again, comment, tags, course, created_at")
+        .eq("teacher_id", teacherId)
+        .order("created_at", { ascending: false })
+        .limit(maxReviewsToFetch);
+
+      if (selectedCourse) q = q.eq("course", selectedCourse);
+      return q;
+    })(),
+  ]);
+
+  const dist = distRes.data ?? null;
+  const topTagsRows = (topTagsRes.data ?? []) as TagRow[];
+  const courseRows = (courseRowsRes.data ?? []) as CourseRow[];
+  const reviews = (reviewsRes.data ?? []) as ReviewRow[];
+  const reviewsErr = reviewsRes.error ?? null;
+
+  // Rating distribution
   const counts = {
     5: dist?.q5 ?? 0,
     4: dist?.q4 ?? 0,
@@ -76,64 +141,55 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
     2: dist?.q2 ?? 0,
     1: dist?.q1 ?? 0,
   };
-  const totalRatings = (teacher.review_count ?? 0) || Object.values(counts).reduce((a, b) => a + b, 0);
 
-  // top tags
-  const { data: topTagsRows } = await supabase
-    .from("teacher_top_tags")
-    .select("tag,cnt")
-    .eq("teacher_id", teacherId)
-    .order("cnt", { ascending: false })
-    .limit(10);
+  const totalRatings =
+    (teacher.review_count ?? 0) || Object.values(counts).reduce((a, b) => a + b, 0);
 
-  const topTags = (topTagsRows ?? []).map((r) => String(r.tag));
+  // Top tags
+  const topTags = topTagsRows.map((r) => String(r.tag ?? "")).filter(Boolean);
 
-  // course dropdown options
-  const { data: courseRows } = await supabase
-    .from("reviews")
-    .select("course")
-    .eq("teacher_id", teacherId)
-    .not("course", "is", null);
+  // Course dropdown options (dedupe + sort)
+  const courseOptions = Array.from(
+    new Set(courseRows.map((r) => r.course).filter(Boolean) as string[])
+  ).sort((a, b) => a.localeCompare(b));
 
-  const courseOptions = Array.from(new Set((courseRows ?? []).map((r) => r.course).filter(Boolean) as string[])).sort(
-    (a, b) => a.localeCompare(b)
-  );
+  // Votes (counts + my vote)
+  const reviewIds = reviews.map((r) => r.id);
 
-  const selectedCourse = (searchParams?.course ?? "").trim();
+  const [countRowsRes, myVotesRes] = await Promise.all([
+    reviewIds.length > 0
+      ? supabase.rpc("get_review_vote_counts", { review_ids: reviewIds })
+      : Promise.resolve({ data: [] as any[] }),
 
-  // ✅ Fetch enough reviews to make the "most upvoted" ordering meaningful,
-  // but cap to keep the RPC payload reasonable.
-  const maxReviewsToFetch = Math.min(Number(teacher.review_count ?? 200) || 200, 1000);
+    isAuthed && reviewIds.length > 0
+      ? supabase
+          .from("review_votes")
+          .select("review_id,vote")
+          .in("review_id", reviewIds)
+          .eq("user_id", userData.user!.id)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
-  // reviews list
-  let reviewsQuery = supabase
-    .from("reviews")
-    .select("id, quality, difficulty, would_take_again, comment, tags, course, created_at")
-    .eq("teacher_id", teacherId)
-    .order("created_at", { ascending: false })
-    .limit(maxReviewsToFetch);
-
-  if (selectedCourse) reviewsQuery = reviewsQuery.eq("course", selectedCourse);
-
-  const { data: reviews, error: reviewsErr } = await reviewsQuery;
-
-  // votes (counts + my vote)
-  const reviewIds = (reviews ?? []).map((r) => r.id);
-
-  const { data: countRows } =
-    reviewIds.length > 0 ? await supabase.rpc("get_review_vote_counts", { review_ids: reviewIds }) : { data: [] as any[] };
+  const countRows = (countRowsRes as any)?.data ?? [];
+  const myVotes = (myVotesRes as any)?.data ?? [];
 
   const countsByReview = new Map<string, { up: number; down: number }>();
-  (countRows ?? []).forEach((row: any) => {
-    countsByReview.set(String(row.review_id), {
+  for (const row of countRows) {
+    const id = String(row.review_id);
+    countsByReview.set(id, {
       up: Number(row.upvotes ?? 0),
       down: Number(row.downvotes ?? 0),
     });
-  });
+  }
 
-  // ✅ Sort reviews by most upvotes (likes) first.
-  // Tie-breakers: fewer downvotes, then newest first.
-  const sortedReviews = (reviews ?? []).slice().sort((a: any, b: any) => {
+  const myVoteByReview = new Map<string, 1 | -1>();
+  for (const v of myVotes) {
+    const vv = Number(v.vote);
+    if (vv === 1 || vv === -1) myVoteByReview.set(String(v.review_id), vv);
+  }
+
+  // Sort by most upvotes, then fewer downvotes, then newest
+  const sortedReviews = reviews.slice().sort((a, b) => {
     const aKey = String(a.id);
     const bKey = String(b.id);
     const aCounts = countsByReview.get(aKey) ?? { up: 0, down: 0 };
@@ -143,20 +199,6 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
     if (aCounts.down !== bCounts.down) return aCounts.down - bCounts.down;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
-
-  const myVoteByReview = new Map<string, 1 | -1>();
-  if (isAuthed && reviewIds.length > 0) {
-    const { data: myVotes } = await supabase
-      .from("review_votes")
-      .select("review_id,vote")
-      .in("review_id", reviewIds)
-      .eq("user_id", userData.user!.id);
-
-    (myVotes ?? []).forEach((v: any) => {
-      const vv = Number(v.vote);
-      if (vv === 1 || vv === -1) myVoteByReview.set(String(v.review_id), vv);
-    });
-  }
 
   const rateHref = isAuthed
     ? `/teachers/${teacherId}/rate`
@@ -186,7 +228,9 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
 
             <div className="mt-3 text-sm font-semibold text-neutral-800">
               Overall Quality Based on{" "}
-              <span className="underline underline-offset-2 decoration-neutral-300">{teacher.review_count ?? 0} ratings</span>
+              <span className="underline underline-offset-2 decoration-neutral-300">
+                {teacher.review_count ?? 0} ratings
+              </span>
             </div>
 
             <div className="mt-6 flex items-start justify-between gap-4">
@@ -194,12 +238,19 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                 <div className="text-5xl font-extrabold tracking-tight">{teacher.full_name}</div>
                 <div className="mt-3 text-sm text-neutral-800">
                   Teacher in the{" "}
-                  <span className="font-semibold underline underline-offset-2">{teacher.subject ?? "—"}</span> department at{" "}
+                  <span className="font-semibold underline underline-offset-2">
+                    {teacher.subject ?? "—"}
+                  </span>{" "}
+                  department at{" "}
                   <span className="font-semibold underline underline-offset-2">BIPH</span>
                 </div>
               </div>
 
-              <button className="mt-2 rounded-lg p-2 hover:bg-neutral-100" aria-label="Bookmark" type="button">
+              <button
+                className="mt-2 rounded-lg p-2 hover:bg-neutral-100"
+                aria-label="Bookmark"
+                type="button"
+              >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="opacity-70">
                   <path
                     d="M6 3h12a1 1 0 011 1v18l-7-4-7 4V4a1 1 0 011-1z"
@@ -224,12 +275,12 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
 
             {/* Rate button (primary entry to rating page) */}
             <div className="mt-8 flex gap-4">
-              <a
+              <Link
                 href={rateHref}
                 className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
               >
                 Rate <span className="ml-2">→</span>
-              </a>
+              </Link>
             </div>
 
             {/* Top tags */}
@@ -288,7 +339,11 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
           <div className="text-lg font-semibold">{teacher.review_count ?? 0} Student Ratings</div>
 
           {/* Course filter */}
-          <form action={`/teachers/${teacherId}#ratings`} method="get" className="mt-4 flex w-full max-w-sm items-center gap-2">
+          <form
+            action={`/teachers/${teacherId}#ratings`}
+            method="get"
+            className="mt-4 flex w-full max-w-sm items-center gap-2"
+          >
             <select
               name="course"
               defaultValue={selectedCourse || ""}
@@ -329,7 +384,9 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                       <div className="w-28 shrink-0 text-center">
                         <div className="text-xs font-semibold tracking-wide text-neutral-700">QUALITY</div>
                         <div className={`mt-2 rounded-xl px-3 py-5 ${ratingClass(r.quality)}`}>
-                          <div className="text-4xl font-extrabold leading-none">{Number(r.quality).toFixed(1)}</div>
+                          <div className="text-4xl font-extrabold leading-none">
+                            {Number(r.quality ?? 0).toFixed(1)}
+                          </div>
                         </div>
                       </div>
 
@@ -343,14 +400,15 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                         </div>
 
                         <div className="mt-2 text-sm text-neutral-800">
-                          <span className="font-semibold">Would take again:</span> {r.would_take_again ? "Yes" : "No"}
+                          <span className="font-semibold">Would take again:</span>{" "}
+                          {r.would_take_again ? "Yes" : "No"}
                           <span className="mx-2 text-neutral-300">|</span>
                           <span className="font-semibold">Difficulty:</span> {r.difficulty}/5
                         </div>
 
                         {Array.isArray(r.tags) && r.tags.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {r.tags.map((t: string) => (
+                            {r.tags.map((t) => (
                               <span
                                 key={t}
                                 className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
@@ -361,7 +419,9 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                           </div>
                         ) : null}
 
-                        {r.comment ? <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p> : null}
+                        {r.comment ? (
+                          <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
+                        ) : null}
 
                         <ReviewVoteButtons
                           teacherId={teacherId}
@@ -380,12 +440,12 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
           </div>
 
           <div className="mt-10 flex justify-center">
-            <a
+            <Link
               href={rateHref}
               className="inline-flex items-center justify-center rounded-full bg-blue-600 px-10 py-3 text-sm font-semibold text-white hover:opacity-90"
             >
               Rate this teacher <span className="ml-2">→</span>
-            </a>
+            </Link>
           </div>
         </section>
       </div>
