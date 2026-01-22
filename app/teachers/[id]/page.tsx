@@ -1,6 +1,5 @@
 // app/teachers/[id]/page.tsx
 import Header from "@/components/Header";
-import RateForm from "@/components/RateForm";
 import ReviewVoteButtons from "@/components/ReviewVoteButtons";
 import SiteFooter from "@/components/SiteFooter";
 import { createSupabaseServerClient } from "@/lib/supabase";
