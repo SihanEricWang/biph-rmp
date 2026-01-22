@@ -22,14 +22,23 @@ export default async function RatePage({ params }: { params: { id: string } }) {
     redirect(`/login?redirectTo=${encodeURIComponent(`/teachers/${teacherId}/rate`)}`);
   }
 
-  // load teacher
+  // load teacher (now includes subjects)
   const { data: teacher, error: tErr } = await supabase
     .from("teachers")
-    .select("id, full_name, subject")
+    .select("id, full_name, subject, subjects")
     .eq("id", teacherId)
     .maybeSingle();
 
   if (tErr || !teacher) notFound();
+
+  // normalize subjects: prefer teachers.subjects (text[]), fallback to teachers.subject
+  const rawSubjects = (teacher as any).subjects as string[] | null | undefined;
+  const teacherSubjects: string[] =
+    Array.isArray(rawSubjects) && rawSubjects.length
+      ? rawSubjects
+      : teacher.subject
+        ? [teacher.subject]
+        : [];
 
   const heyName = emailToHey(user.email);
 
@@ -59,13 +68,15 @@ export default async function RatePage({ params }: { params: { id: string } }) {
           <div className="text-5xl font-extrabold tracking-tight">{teacher.full_name}</div>
           <div className="text-2xl font-medium text-neutral-800">Add Rating</div>
           <div className="mt-2 text-sm text-neutral-700">
-            <span className="font-semibold">{teacher.subject ?? "—"}</span>
+            <span className="font-semibold">
+              {teacher.subject ?? teacherSubjects[0] ?? "—"}
+            </span>
             <span className="mx-2 text-neutral-300">·</span>
             <span className="underline underline-offset-2 decoration-neutral-300">BIPH</span>
           </div>
         </div>
 
-        <RateForm teacherId={teacherId} teacherSubject={teacher.subject ?? null} />
+        <RateForm teacherId={teacherId} teacherSubjects={teacherSubjects} />
       </div>
     </main>
   );
