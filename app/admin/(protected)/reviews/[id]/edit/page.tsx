@@ -13,16 +13,23 @@ export default async function AdminReviewEditPage({
 }) {
   const supabase = createSupabaseAdminClient();
 
+  // 1) 先取 review（不做嵌套 join）
   const { data: r, error } = await supabase
     .from("reviews")
-    .select(
-      "id, teacher_id, user_id, quality, difficulty, would_take_again, comment, tags, course, grade, is_online, created_at, teacher:teachers(full_name, subject)"
-    )
+    .select("id, teacher_id, user_id, quality, difficulty, would_take_again, comment, tags, course, grade, is_online, created_at")
     .eq("id", params.id)
     .maybeSingle();
 
   if (error || !r) notFound();
 
+  // 2) 再取 teacher
+  const { data: teacher } = await supabase
+    .from("teachers")
+    .select("full_name, subject")
+    .eq("id", r.teacher_id)
+    .maybeSingle();
+
+  // 3) 取用户邮箱
   const userRes = await supabase.auth.admin.getUserById(r.user_id);
   const email = userRes.data.user?.email ?? "—";
 
@@ -33,13 +40,16 @@ export default async function AdminReviewEditPage({
           <div className="text-xs font-semibold text-neutral-500">Reviews</div>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Edit</h1>
           <div className="mt-1 text-sm text-neutral-600">
-            Teacher: <span className="font-semibold">{r.teacher?.full_name || "—"}</span>
+            Teacher: <span className="font-semibold">{teacher?.full_name || "—"}</span>
             <span className="mx-2 text-neutral-300">·</span>
             User: <span className="font-mono">{email}</span>
           </div>
         </div>
 
-        <Link href="/admin/reviews" className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:bg-neutral-50">
+        <Link
+          href="/admin/reviews"
+          className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold hover:bg-neutral-50"
+        >
           ← Back
         </Link>
       </div>
