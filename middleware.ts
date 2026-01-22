@@ -9,8 +9,8 @@ function mustGetEnv(name: string): string {
 }
 
 function hasSupabaseAuthCookie(request: NextRequest): boolean {
-  // Supabase SSR 会在 cookie 里存 session（常见前缀 sb-...）
-  // 没有任何相关 cookie 时，没必要调用 auth.getUser()（省一次网络请求）
+  // Supabase SSR stores session cookies with names like "sb-...".
+  // If no relevant cookie exists, we can skip auth.getUser() to avoid a network call.
   return request.cookies
     .getAll()
     .some(
@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // 没有 session 相关 cookie：直接放行（游客访问不触发 Supabase Auth）
+  // Guests: let them through without touching Supabase Auth.
   if (!hasSupabaseAuthCookie(request)) return response;
 
   const supabase = createServerClient(
@@ -55,17 +55,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // ✅ 必须 await：让 Supabase 有机会刷新 session 并把 Set-Cookie 写进 response
+  // Must await so Supabase can refresh the session and write Set-Cookie.
   try {
     await supabase.auth.getUser();
   } catch {
-    // Supabase 临时不可达时不阻塞页面（按游客渲染）
+    // If Supabase is temporarily unavailable, do not block navigation.
   }
 
   return response;
 }
 
 export const config = {
-  // 只在需要“登录态/刷新 session”的路由上启用 middleware，显著降低边缘调用和 Auth 请求量
+  // Only run middleware on routes that actually benefit from session refresh.
   matcher: ["/me/:path*", "/admin/:path*", "/teachers/:path*"],
 };
