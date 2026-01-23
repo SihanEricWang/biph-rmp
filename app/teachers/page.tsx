@@ -79,7 +79,7 @@ export default async function TeachersPage({ searchParams }: PageProps) {
         <div className="mt-3 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
           <div className="font-medium">We’re actively building our teacher and subject directory, and it’s still a work in progress.</div>
           <div className="mt-1 text-yellow-800">
-            Want to contribute and help improve the list? Scroll to the bottom and click <span className="font-semibold">Contact Us</span> ↓
+            Want to contribute and help improve the list? Scroll to the bottom(page footer) and click <span className="font-semibold">Contact Us</span> ↓
           </div>
         </div>
 
