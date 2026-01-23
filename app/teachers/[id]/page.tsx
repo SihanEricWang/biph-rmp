@@ -379,7 +379,7 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
 
                 return (
                   <div key={key} className="rounded-2xl border bg-white shadow-sm">
-                    <div className="flex gap-6 p-6">
+                    <div className="flex items-stretch gap-6 p-6">
                       {/* left quality + difficulty boxes */}
                       <div className="w-28 shrink-0 text-center space-y-4">
                         {/* QUALITY */}
@@ -399,21 +399,53 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                         </div>
                       </div>
 
-
                       {/* content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="text-sm font-extrabold tracking-wide text-neutral-900">
-                            {r.course ? String(r.course).toUpperCase() : "—"}
+                      <div className="min-w-0 flex-1 flex flex-col">
+                        {/* 上半部分：标题/信息/标签/评论 */}
+                        <div>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="text-sm font-extrabold tracking-wide text-neutral-900">
+                              {r.course ? String(r.course).toUpperCase() : "—"}
+                            </div>
+                            <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
                           </div>
-                          <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
+                      
+                          <div className="mt-2 text-sm text-neutral-800">
+                            <span className="font-semibold">Would take again:</span>{" "}
+                            {r.would_take_again === null ? "—" : r.would_take_again ? "Yes" : "No"}
+                          </div>
+                      
+                          {Array.isArray(r.tags) && r.tags.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {r.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                      
+                          {r.comment ? (
+                            <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
+                          ) : null}
                         </div>
+                      
+                        {/* 下半部分：投票按钮固定贴底 */}
+                        <div className="mt-auto pt-4">
+                          <ReviewVoteButtons
+                            teacherId={teacherId}
+                            reviewId={key}
+                            upvotes={voteCounts.up}
+                            downvotes={voteCounts.down}
+                            myVote={myVote}
+                            isAuthed={isAuthed}
+                          />
+                        </div>
+                      </div>
 
-                        <div className="mt-2 text-sm text-neutral-800">
-                          <span className="font-semibold">Would take again:</span>{" "}
-                          {r.would_take_again ? "Yes" : "No"}
-                          
-                        </div>
 
                         {Array.isArray(r.tags) && r.tags.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
