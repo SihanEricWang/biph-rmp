@@ -82,7 +82,7 @@ export default function HomePage() {
               <p className="mt-2 text-sm leading-6 text-black/80">
                 We’re BIPH students who built and operate this website. It just launched, and we’d love your help—whether
                 you’d like to contribute to the project or simply share suggestions. Please scroll to the bottom of this page
-                and click <span className="font-semibold underline underline-offset-2">Contact Us</span>.
+                (page footer) and click <span className="font-semibold underline underline-offset-2">Contact Us</span>.
               </p>
             </div>
           </div>
