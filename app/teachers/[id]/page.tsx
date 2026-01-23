@@ -379,7 +379,7 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
 
                 return (
                   <div key={key} className="rounded-2xl border bg-white shadow-sm">
-                    <div className="flex items-stretch gap-6 p-6">
+                    <div className="flex gap-6 p-6">
                       {/* left quality + difficulty boxes */}
                       <div className="w-28 shrink-0 text-center space-y-4">
                         {/* QUALITY */}
@@ -389,7 +389,7 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                             <div className="text-4xl font-extrabold leading-none">{fmt1(r.quality)}</div>
                           </div>
                         </div>
-                
+                      
                         {/* DIFFICULTY (always gray) */}
                         <div>
                           <div className="text-xs font-semibold tracking-wide text-neutral-700">DIFFICULTY</div>
@@ -398,57 +398,55 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                           </div>
                         </div>
                       </div>
-                
+
+
                       {/* content */}
-                      <div className="min-w-0 flex-1 flex flex-col">
-                        {/* top content */}
-                        <div>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="text-base font-extrabold tracking-wide text-neutral-900">
-                              {r.course ? String(r.course).toUpperCase() : "—"}
-                            </div>
-                            <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="text-sm font-extrabold tracking-wide text-neutral-900">
+                            {r.course ? String(r.course).toUpperCase() : "—"}
                           </div>
-                
-                          <div className="mt-2 text-sm text-neutral-800">
-                            <span className="font-semibold">Would take again:</span>{" "}
-                            {r.would_take_again === null ? "—" : r.would_take_again ? "Yes" : "No"}
+                          <div className="text-sm text-neutral-500">{formatDate(r.created_at)}</div>
+                        </div>
+
+                        <div className="mt-2 text-sm text-neutral-800">
+                          <span className="font-semibold">Would take again:</span>{" "}
+                          {r.would_take_again ? "Yes" : "No"}
+                          
+                        </div>
+
+                        {Array.isArray(r.tags) && r.tags.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {r.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
+                              >
+                                {t}
+                              </span>
+                            ))}
                           </div>
-                
-                          {Array.isArray(r.tags) && r.tags.length > 0 ? (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {r.tags.map((t) => (
-                                <span
-                                  key={t}
-                                  className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-800"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                
-                          {r.comment ? (
-                            <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
-                          ) : null}
-                        </div>
-                
-                        {/* bottom: voting pinned to bottom */}
-                        <div className="mt-auto pt-4">
-                          <ReviewVoteButtons
-                            teacherId={teacherId}
-                            reviewId={key}
-                            upvotes={voteCounts.up}
-                            downvotes={voteCounts.down}
-                            myVote={myVote}
-                            isAuthed={isAuthed}
-                          />
-                        </div>
+                        ) : null}
+
+                        {r.comment ? (
+                          <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-800">{r.comment}</p>
+                        ) : null}
+
+                        <ReviewVoteButtons
+                          teacherId={teacherId}
+                          reviewId={key}
+                          upvotes={voteCounts.up}
+                          downvotes={voteCounts.down}
+                          myVote={myVote}
+                          isAuthed={isAuthed}
+                        />
                       </div>
                     </div>
                   </div>
                 );
-
+              })
+            )}
+          </div>
 
           <div className="mt-10 flex justify-center">
             <Link
