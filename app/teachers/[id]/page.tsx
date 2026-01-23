@@ -370,7 +370,7 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                       {/* left quality + difficulty boxes */}
                       <div className="w-28 shrink-0 text-center flex flex-col justify-between">
                         {/* QUALITY */}
-                        <div className="mb-4">
+                        <div className="mb-3">
                           <div className="text-xs font-semibold tracking-wide text-neutral-700">QUALITY</div>
                           <div className={`mt-2 rounded-xl px-3 py-5 ${ratingClass(r.quality)}`}>
                             <div className="text-4xl font-extrabold leading-none">{fmt1(r.quality)}</div>
@@ -378,7 +378,7 @@ export default async function TeacherPage({ params, searchParams }: PageProps) {
                         </div>
                       
                         {/* DIFFICULTY */}
-                        <div className="mt-4">
+                        <div className="mt-3">
                           <div className="text-xs font-semibold tracking-wide text-neutral-700">DIFFICULTY</div>
                           <div className="mt-2 rounded-xl bg-neutral-200 px-3 py-5 text-neutral-900">
                             <div className="text-4xl font-extrabold leading-none">{fmt1(r.difficulty)}</div>
