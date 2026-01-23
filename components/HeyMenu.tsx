@@ -1,9 +1,18 @@
-// components/HeyMenu.tsx
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { signOut } from "@/lib/actions";
+
+function safeRedirectTo(path: string, fallback = "/teachers") {
+  const v = (path ?? "").trim();
+  if (!v) return fallback;
+  // 只允许站内相对路径，防 open-redirect
+  if (!v.startsWith("/")) return fallback;
+  if (v.startsWith("//")) return fallback;
+  if (v.includes("://")) return fallback;
+  return v;
+}
 
 export default function HeyMenu({
   heyName,
@@ -15,6 +24,18 @@ export default function HeyMenu({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+
+  // ✅ 登录后回到当前页面（不依赖 next/navigation hooks，避免 Suspense/CSR bailout 类问题）
+  const loginHref = useMemo(() => {
+    // SSR 时 window 不存在，这里用 fallback
+    if (typeof window === "undefined") {
+      const rt = encodeURIComponent("/teachers");
+      return `/login?mode=signin&redirectTo=${rt}`;
+    }
+    const current = safeRedirectTo(window.location.pathname + window.location.search, "/teachers");
+    return `/login?mode=signin&redirectTo=${encodeURIComponent(current)}`;
+  }, []);
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
@@ -22,7 +43,10 @@ export default function HeyMenu({
       if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
@@ -32,13 +56,24 @@ export default function HeyMenu({
     };
   }, []);
 
+  // ✅ 未登录：显示 Sign in 按钮（替代 HEY, guest）
   if (!isAuthed) {
-    return <div className="text-sm font-extrabold tracking-wide">HEY, {heyName}</div>;
+    return (
+      <Link
+        href={loginHref}
+        className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
+        // 未登录按钮通常不需要预取（减少无意义请求）
+        prefetch={false}
+      >
+        Sign in
+      </Link>
+    );
   }
 
   return (
     <div ref={wrapRef} className="relative">
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold tracking-wide hover:bg-white/10"
@@ -47,25 +82,23 @@ export default function HeyMenu({
       >
         HEY, {heyName}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M6 9l6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
       {open ? (
         <div
           role="menu"
+          aria-label="User menu"
           className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border bg-white text-black shadow-lg"
         >
-          <Link
-            role="menuitem"
-            href="/me/tickets"
-            className="block px-4 py-3 text-sm hover:bg-neutral-50"
-            onClick={() => setOpen(false)}
-            prefetch
-          >
-            My Tickets
-          </Link>
-
+          {/* ✅ 需求：My Ratings 放上面 */}
           <Link
             role="menuitem"
             href="/me/ratings"
@@ -76,10 +109,22 @@ export default function HeyMenu({
             My Ratings
           </Link>
 
+          <Link
+            role="menuitem"
+            href="/me/tickets"
+            className="block px-4 py-3 text-sm hover:bg-neutral-50"
+            onClick={() => setOpen(false)}
+            prefetch
+          >
+            My Tickets
+          </Link>
+
           <div className="h-px bg-neutral-200" />
 
           <form
             action={() => {
+              // ✅ 退出时也顺便把菜单关掉，避免 UI 悬挂
+              setOpen(false);
               startTransition(async () => {
                 await signOut();
               });
