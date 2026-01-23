@@ -1,6 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import SiteFooter from "@/components/SiteFooter";
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata = {
   title: "Rate My Teacher",
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex-1">{children}</div>
           <SiteFooter />
         </div>
+        <Analytics />
       </body>
     </html>
   );
