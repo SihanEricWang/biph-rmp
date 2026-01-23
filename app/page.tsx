@@ -4,75 +4,74 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
       {/* HERO */}
-      <section className="relative min-h-[86vh] w-full overflow-hidden">
-        {/* background (placeholder) */}
+      <section className="relative min-h-[92vh] w-full overflow-hidden">
+        {/* background */}
         <div className="absolute inset-0">
-          {/* faux-photo gradient */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.18),_rgba(0,0,0,0.75))]" />
           <div className="absolute inset-0 bg-[linear-gradient(115deg,_rgba(0,0,0,0.65),_rgba(0,0,0,0.2))]" />
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_rgba(0,0,0,0.35),_rgba(0,0,0,0.88))]" />
         </div>
       
-        <div className="relative mx-auto flex min-h-[86vh] max-w-6xl flex-col items-center justify-center px-4 text-center text-white">
-          {/* Logo badge */}
-          <div className="flex w-full justify-center">
-            <div className="inline-flex items-center">
-              <div className="inline-flex overflow-hidden rounded-sm shadow-sm ring-1 ring-white/20">
-                <div className="whitespace-nowrap bg-black px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em]">
-                  RATE MY
-                </div>
-                <div className="whitespace-nowrap bg-white px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em] text-black">
-                  TEACHER
+        {/* layout wrapper */}
+        <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col px-4">
+          {/* TOP: main hero content */}
+          <div className="flex flex-1 flex-col items-center justify-center text-center text-white">
+            {/* Logo badge */}
+            <div className="flex w-full justify-center">
+              <div className="inline-flex items-center">
+                <div className="inline-flex overflow-hidden rounded-sm shadow-sm ring-1 ring-white/20">
+                  <div className="whitespace-nowrap bg-black px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em]">
+                    RATE MY
+                  </div>
+                  <div className="whitespace-nowrap bg-white px-6 py-3 text-sm font-black tracking-[0.25em] sm:tracking-[0.35em] text-black">
+                    TEACHER
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
       
-          <h1 className="mt-10 text-3xl font-semibold tracking-tight md:text-4xl">
-            Find a teacher at{" "}
-            <span className="underline decoration-white/50 underline-offset-4">
-              Basis Int. School Park Lane Harbor
-            </span>
-          </h1>
-      
-          {/* No search box — button instead */}
-          <div className="mt-10 w-full max-w-2xl">
-            <Link
-              href="/teachers"
-              className="group relative flex h-14 w-full items-center justify-center rounded-full bg-white/95 px-6 text-sm font-semibold text-black shadow-lg ring-1 ring-white/20 hover:bg-white"
-              prefetch
-            >
-              <span>Enter Rate My Teacher</span>
-              <span className="ml-2 opacity-70 group-hover:opacity-100">→</span>
-      
-              <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-white/80">
-                Click to view teachers and ratings (sign in to post)
+            <h1 className="mt-10 text-3xl font-semibold tracking-tight md:text-4xl">
+              Find a teacher at{" "}
+              <span className="underline decoration-white/50 underline-offset-4">
+                Basis Int. School Park Lane Harbor
               </span>
-            </Link>
+            </h1>
+      
+            <div className="mt-10 w-full max-w-2xl">
+              <Link
+                href="/teachers"
+                className="group relative flex h-14 w-full items-center justify-center rounded-full bg-white/95 px-6 text-sm font-semibold text-black shadow-lg ring-1 ring-white/20 hover:bg-white"
+                prefetch
+              >
+                <span>Enter Rate My Teacher</span>
+                <span className="ml-2 opacity-70 group-hover:opacity-100">→</span>
+      
+                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-white/80">
+                  Click to view teachers and ratings (sign in to post)
+                </span>
+              </Link>
+            </div>
+      
+            <a
+              href="#about"
+              className="mt-16 inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-white/80 hover:text-white"
+            >
+              Learn more
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80">
+                <path
+                  d="M6 9l6 6 6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
           </div>
       
-          {/* scroll hint */}
-          <a
-            href="#about"
-            className="mt-16 inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-white/80 hover:text-white"
-          >
-            Learn more
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80">
-              <path
-                d="M6 9l6 6 6-6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-        </div>
-      
-        {/* Yellow callout on the extra black area */}
-        <div className="absolute bottom-8 left-0 right-0 px-4">
-          <div className="mx-auto max-w-3xl">
-            <div className="rounded-2xl bg-yellow-300/95 p-6 text-left text-black shadow-xl ring-1 ring-yellow-200 backdrop-blur">
+          {/* BOTTOM: yellow callout (now it sits BELOW, not covering anything) */}
+          <div className="pb-10">
+            <div className="mx-auto max-w-3xl rounded-2xl bg-yellow-300/95 p-6 text-left text-black shadow-xl ring-1 ring-yellow-200 backdrop-blur">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-2 w-2 rounded-full bg-black/80" />
                 <div className="text-xs font-extrabold tracking-[0.22em] uppercase">We need you!</div>
